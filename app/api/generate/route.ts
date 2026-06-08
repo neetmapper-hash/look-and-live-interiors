@@ -1,5 +1,4 @@
 import Groq from 'groq-sdk';
-import { fal } from '@fal-ai/client';
 
 export const maxDuration = 60;
 
@@ -11,8 +10,6 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    fal.config({ credentials: process.env.FAL_KEY });
-
     // Step 1: Groq builds 4 different prompts
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -21,17 +18,16 @@ export async function POST(req: Request) {
       messages: [
         {
           role: 'system',
-          content: `You are an expert interior design prompt engineer for Stable Diffusion XL.
-Convert room requirements into detailed photorealistic image generation prompts.
-Output ONLY a JSON array of 4 strings. No explanation. No markdown. Just the JSON array.`,
+          content: `You are an expert interior design prompt engineer.
+Output ONLY a JSON array of 4 strings. No explanation. No markdown.`,
         },
         {
           role: 'user',
-          content: `4 DIFFERENT Stable Diffusion prompts for:
+          content: `4 DIFFERENT image prompts for:
 Room: ${roomType}, Size: ${length}ft x ${width}ft
 Style: ${style}, Budget: ${budget}, Setting: Indian home interior
-Each prompt must show a distinctly different design variation.
-End every prompt with: photorealistic, 8k, interior design photography, professional lighting
+Each must show a distinctly different design variation.
+End every prompt with: photorealistic, 8k, interior design photography
 Output format: ["prompt1", "prompt2", "prompt3", "prompt4"]`,
         },
       ],
@@ -45,26 +41,22 @@ Output format: ["prompt1", "prompt2", "prompt3", "prompt4"]`,
       const cleaned = content.replace(/```json|```/g, '').trim();
       prompts = JSON.parse(cleaned);
     } catch {
-      const fallback = `${style} ${roomType}, ${length}ft x ${width}ft, Indian home, photorealistic, 8k`;
+      const fallback = `${style} ${roomType}, Indian home, photorealistic, 8k`;
       prompts = [fallback, fallback, fallback, fallback];
     }
 
-    // Step 2: Generate all 4 images in parallel via fal.ai
+    // Step 2: Generate images via Pollinations — completely free, no API key
     const imagePromises = prompts.slice(0, 4).map(async (prompt, i) => {
       try {
-        const result = await fal.subscribe('fal-ai/fast-sdxl', {
-          input: {
-            prompt,
-            negative_prompt: 'blurry, low quality, distorted, cartoon, watermark',
-            image_size: 'landscape_4_3',
-            num_inference_steps: 28,
-            guidance_scale: 7.5,
-            num_images: 1,
-          },
-        });
+        const encoded = encodeURIComponent(prompt);
+        const seed = Math.floor(Math.random() * 1000000);
+        const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=768&seed=${seed}&nologo=true&model=flux`;
 
-        const imageUrl = (result.data as any)?.images?.[0]?.url ?? null;
-        return { url: imageUrl, prompt, index: i };
+        // Verify the URL actually returns an image
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        return { url, prompt, index: i };
       } catch (err) {
         console.error(`Image ${i} failed:`, err);
         return { url: null, prompt, index: i };
