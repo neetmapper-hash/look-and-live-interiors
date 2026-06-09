@@ -263,21 +263,15 @@ export default function Home() {
                           : 'border-stone-200 hover:border-stone-300'
                       }`}
                     >
-                      {img.url ? (
-                        <img
-                          src={img.url}
-                          alt={`Room design ${i + 1}`}
-                          className="w-full object-cover"
-                          style={{ aspectRatio: '4/3' }}
-                        />
-                      ) : (
-                        <div
-                          className="w-full bg-stone-100 flex items-center justify-center"
-                          style={{ aspectRatio: '4/3' }}
-                        >
-                          <span className="text-xs text-stone-400">Failed to generate</span>
-                        </div>
-                      )}
+                      {<img
+                        src={img.url}
+                        alt={`Room design ${i + 1}`}
+                        className="w-full object-cover"
+                        style={{ aspectRatio: '4/3' }}
+                        onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                        }}
+                        />}
                       <div className="p-2 bg-white flex items-center justify-between">
                         <span className="text-xs text-stone-500">Design {i + 1}</span>
                         {selectedIndex === i && (

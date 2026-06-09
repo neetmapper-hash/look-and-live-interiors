@@ -10,7 +10,6 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Step 1: Groq builds 4 different prompts
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     const promptCompletion = await groq.chat.completions.create({
@@ -45,25 +44,14 @@ Output format: ["prompt1", "prompt2", "prompt3", "prompt4"]`,
       prompts = [fallback, fallback, fallback, fallback];
     }
 
-    // Step 2: Generate images via Pollinations — completely free, no API key
-    const imagePromises = prompts.slice(0, 4).map(async (prompt, i) => {
-      try {
-        const encoded = encodeURIComponent(prompt);
-        const seed = Math.floor(Math.random() * 1000000);
-        const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=768&seed=${seed}&nologo=true&model=flux`;
-
-        // Verify the URL actually returns an image
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        return { url, prompt, index: i };
-      } catch (err) {
-        console.error(`Image ${i} failed:`, err);
-        return { url: null, prompt, index: i };
-      }
+    // Just build the URLs — browser will load them directly, no server fetch
+    const results = prompts.slice(0, 4).map((prompt, i) => {
+      const encoded = encodeURIComponent(prompt);
+      const seed = Math.floor(Math.random() * 1000000);
+      const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=768&seed=${seed}&nologo=true&model=flux`;
+      return { url, prompt, index: i };
     });
 
-    const results = await Promise.all(imagePromises);
     return Response.json({ images: results, roomDetails: { roomType, length, width, style, budget } });
 
   } catch (error) {
