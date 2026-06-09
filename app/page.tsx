@@ -264,14 +264,16 @@ export default function Home() {
                       }`}
                     >
                       {<img
-                        src={img.url ?? ''}
-                        alt={`Room design ${i + 1}`}
-                        className="w-full object-cover"
-                        style={{ aspectRatio: '4/3' }}
-                        onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/placeholder.jpg';
-                        }}
-                        />}
+  src={img.url ?? ''}
+  alt={`Room design ${i + 1}`}
+  className="w-full object-cover"
+  style={{ aspectRatio: '4/3' }}
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.onerror = null; // prevent infinite loop
+    target.style.display = 'none';
+  }}
+/>}
                       <div className="p-2 bg-white flex items-center justify-between">
                         <span className="text-xs text-stone-500">Design {i + 1}</span>
                         {selectedIndex === i && (
