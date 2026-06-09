@@ -17,12 +17,11 @@ export async function POST(req: Request) {
       messages: [
         {
           role: 'system',
-          content: `You are an expert interior design prompt engineer.
-Output ONLY a JSON array of 4 strings. No explanation. No markdown.`,
+          content: `You are an expert interior design prompt engineer. Output ONLY a JSON array of 4 strings. No explanation. No markdown.`,
         },
         {
           role: 'user',
-          content: `4 DIFFERENT image prompts for:
+          content: `4 DIFFERENT Stable Diffusion prompts for:
 Room: ${roomType}, Size: ${length}ft x ${width}ft
 Style: ${style}, Budget: ${budget}, Setting: Indian home interior
 Each must show a distinctly different design variation.
@@ -44,14 +43,47 @@ Output format: ["prompt1", "prompt2", "prompt3", "prompt4"]`,
       prompts = [fallback, fallback, fallback, fallback];
     }
 
-    // Just build the URLs — browser will load them directly, no server fetch
-    const results = prompts.slice(0, 4).map((prompt, i) => {
-      const encoded = encodeURIComponent(prompt);
-      const seed = Math.floor(Math.random() * 1000000);
-      const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=768&seed=${seed}&nologo=true&model=flux`;
-      return { url, prompt, index: i };
+    // Generate images via Hugging Face - FLUX model, free tier
+    const imagePromises = prompts.slice(0, 4).map(async (prompt, i) => {
+      try {
+        const response = await fetch(
+          'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              inputs: prompt,
+              parameters: {
+                width: 1024,
+                height: 768,
+                num_inference_steps: 4,
+              }
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.text();
+          console.error(`HF image ${i} failed:`, error);
+          return { url: null, prompt, index: i };
+        }
+
+        // HF returns binary image — convert to base64
+        const buffer = await response.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString('base64');
+        const url = `data:image/jpeg;base64,${base64}`;
+
+        return { url, prompt, index: i };
+      } catch (err) {
+        console.error(`Image ${i} failed:`, err);
+        return { url: null, prompt, index: i };
+      }
     });
 
+    const results = await Promise.all(imagePromises);
     return Response.json({ images: results, roomDetails: { roomType, length, width, style, budget } });
 
   } catch (error) {
