@@ -263,17 +263,30 @@ export default function Home() {
                           : 'border-stone-200 hover:border-stone-300'
                       }`}
                     >
-                      {<img
-  src={img.url ?? ''}
-  alt={`Room design ${i + 1}`}
-  className="w-full object-cover"
-  style={{ aspectRatio: '4/3' }}
-  onError={(e) => {
-    const target = e.target as HTMLImageElement;
-    target.onerror = null; // prevent infinite loop
-    target.style.display = 'none';
-  }}
-/>}
+                      {img.url ? (
+  <div className="relative w-full bg-stone-100" style={{ aspectRatio: '4/3' }}>
+    <div className="absolute inset-0 flex items-center justify-center">
+      <span className="text-xs text-stone-400 animate-pulse">Generating image...</span>
+    </div>
+    <img
+      src={img.url}
+      alt={`Room design ${i + 1}`}
+      className="relative w-full object-cover"
+      style={{ aspectRatio: '4/3' }}
+      onLoad={(e) => {
+        // Hide the loading text when image loads
+        const parent = (e.target as HTMLImageElement).parentElement;
+        if (parent?.firstElementChild) {
+          (parent.firstElementChild as HTMLElement).style.display = 'none';
+        }
+      }}
+    />
+  </div>
+) : (
+  <div className="w-full bg-stone-100 flex items-center justify-center" style={{ aspectRatio: '4/3' }}>
+    <span className="text-xs text-stone-400">Failed to generate</span>
+  </div>
+)}
                       <div className="p-2 bg-white flex items-center justify-between">
                         <span className="text-xs text-stone-500">Design {i + 1}</span>
                         {selectedIndex === i && (
