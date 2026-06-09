@@ -264,7 +264,7 @@ export default function Home() {
                       }`}
                     >
                       {<img
-                        src={img.url}
+                        src={img.url ?? ''}
                         alt={`Room design ${i + 1}`}
                         className="w-full object-cover"
                         style={{ aspectRatio: '4/3' }}
